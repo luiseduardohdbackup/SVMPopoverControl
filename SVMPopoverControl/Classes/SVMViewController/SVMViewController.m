@@ -29,7 +29,7 @@
     [popOver.view setFrame:self.view.bounds];
     [self.view addSubview:popOver.view];
 
-    [popOver showPopoverFrom:sender.frame];
+    [popOver showPopoverFromRect:sender.frame];
 }
 
 @end

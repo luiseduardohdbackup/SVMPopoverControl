@@ -9,5 +9,5 @@
 #import <UIKit/UIKit.h>
 
 @interface SVMPopoverControl : UIViewController
--(void)showPopoverFrom:(CGRect)rect;
+-(void)showPopoverFromRect:(CGRect)rect;
 @end
