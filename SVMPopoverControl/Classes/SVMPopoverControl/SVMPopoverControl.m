@@ -7,23 +7,36 @@
 //
 
 #import "SVMPopoverControl.h"
+#define k_ANIMATION_DURATION    0.26
 #define k_POPOVER_HEIGHT_FINAL  180
-#define k_POPOVER_HEIGHT_START  48
+#define k_POPOVER_HEIGHT_START  83
 
 @interface SVMPopoverControl ()
 {
-    IBOutlet UIView *vwPopOver;
     IBOutlet UIButton *btnDismiss;
 
-    IBOutlet NSLayoutConstraint *constraintTop;
-    IBOutlet NSLayoutConstraint *constraintHeight;
-
+    IBOutlet UIView *vwPopover;
     IBOutlet UIView *vwBarTop;
     IBOutlet UIView *vwBarBottom;
+    IBOutlet UIView *vwButtonContainer;
+
+    IBOutlet UIButton *btnCancel;
+    IBOutlet UIButton *btnAction;
+
+    IBOutlet NSLayoutConstraint *constraintPopover_Top;
+    IBOutlet NSLayoutConstraint *constraintPopover_Height;
+
+    IBOutlet NSLayoutConstraint *constraintButtonContainer_Height;
+    IBOutlet NSLayoutConstraint *constraintButtonCancel_Width;
+    IBOutlet NSLayoutConstraint *constraintButtonAction_Width;
+
+    NSMutableArray *arr2Button;
 }
 @end
 
 @implementation SVMPopoverControl
+@synthesize svmDelegate;
+@synthesize tag;
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
@@ -34,46 +47,127 @@
     return self;
 }
 
+- (id)initWithDelegate:(id)delegate cancelButton:(NSString *)cancel andActionButton:(NSString *)action
+{
+    self = [self initWithNibName:@"SVMPopoverControl" bundle:nil];
+    if (self) {
+        if (delegate) {
+            svmDelegate = delegate;
+        }
+
+        arr2Button = [[NSMutableArray alloc] init];
+        if (cancel) {
+            [arr2Button addObject:@{@"title":cancel,
+                                    @"isCancel":@(YES)}];
+        }
+        
+        if (action) {
+            [arr2Button addObject:@{@"title":action,
+                                    @"isCancel":@(NO)}];
+        }
+    }
+    return self;
+}
+
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     // Do any additional setup after loading the view from its nib.
 }
 
+-(void)modifyUI
+{
+    [vwBarTop.layer setMasksToBounds:YES];
+    [vwBarBottom.layer setMasksToBounds:YES];
+}
+
 #pragma mark - Popover methods
 -(void)showPopoverFromRect:(CGRect)rect
 {
-    constraintHeight.constant = k_POPOVER_HEIGHT_START;
-    [self.view layoutIfNeeded];
-
     [self drawPopoverFromRect:rect withCornerRadius:12.0f];
+}
+
+-(void)hide
+{
+    [self btnDismissAct:btnDismiss];
 }
 
 #pragma mark - Button Methods
 -(IBAction)btnDismissAct:(UIButton *)sender
 {
-    [self willMoveToParentViewController:nil];
-    [self.view removeFromSuperview];
-    [self removeFromParentViewController];
+    [UIView animateWithDuration:k_ANIMATION_DURATION
+                          delay:0
+                        options:UIViewAnimationOptionCurveEaseIn
+                     animations:^{
+                         [self.view setAlpha:0.0f];
+                     }
+                     completion:^(BOOL finished) {
+                         [self willMoveToParentViewController:nil];
+                         [self.view removeFromSuperview];
+                         [self removeFromParentViewController];
+                     }];
 }
 
-#pragma mark - Popover Delegate Methods
+-(IBAction)btnAct:(UIButton *)sender
+{
+    if ([svmDelegate respondsToSelector:@selector(svmPopover:clickedButtonAtIndex:)]) {
+        NSLog(@"delegated %d",sender.tag);
+        [svmDelegate svmPopover:self clickedButtonAtIndex:sender.tag];
+    }
+    [self btnDismissAct:btnDismiss];
+}
 
 #pragma mark - Draw Methods
+-(void)handleButtons
+{
+    if (arr2Button.count == 0) {
+        constraintButtonContainer_Height.constant = 0;
+        [vwPopover layoutIfNeeded];
+        [vwButtonContainer setHidden:YES];
+        return;
+    }
+
+    if (arr2Button.count == 1) {
+        if ([arr2Button[0][@"isCancel"] boolValue]) {
+            [btnCancel setTitle:arr2Button[0][@"title"] forState:UIControlStateNormal];
+            constraintButtonAction_Width.constant = 0;
+            constraintButtonCancel_Width.constant = constraintButtonCancel_Width.constant*2;
+            [vwButtonContainer layoutIfNeeded];
+        }
+        else {
+            [btnAction setTitle:arr2Button[0][@"title"] forState:UIControlStateNormal];
+            constraintButtonCancel_Width.constant = 0;
+            constraintButtonAction_Width.constant = constraintButtonAction_Width.constant*2;
+            [vwButtonContainer layoutIfNeeded];
+        }
+    }
+    else {
+        [btnCancel setTitle:arr2Button[0][@"title"] forState:UIControlStateNormal];
+        [btnAction setTitle:arr2Button[1][@"title"] forState:UIControlStateNormal];
+    }
+}
+
 -(void)drawPopoverFromRect:(CGRect)rect withCornerRadius:(CGFloat)r
 {
-    if (rect.origin.y + rect.size.height + vwPopOver.frame.origin.y + k_POPOVER_HEIGHT_FINAL < self.view.frame.size.height) {
+    //initial height
+    constraintPopover_Height.constant = k_POPOVER_HEIGHT_START;
+
+    //modify popover depending on buttons
+    [self handleButtons];
+
+    //draw appropriate popover
+    if (rect.origin.y + rect.size.height + vwPopover.frame.origin.y + k_POPOVER_HEIGHT_FINAL < self.view.frame.size.height) {
         //rect fits above popover
         CGFloat startY = rect.origin.y + rect.size.height;
 
         //draw popover
-        [vwBarTop.layer setMask:[self drawTopBarWithCornerRadius:r
-                                                       startingX:(rect.origin.x + (rect.size.width/2))-vwPopOver.frame.origin.x
-                                                       startingY:startY]];
-        [vwBarBottom.layer setMask:[self drawBottomBarWithCornerRadius:r]];
-
+        [vwBarTop.layer setMask:[self getLayerForTopBarWithCornerRadius:r
+                                                              startingX:(rect.origin.x + (rect.size.width/2))-vwPopover.frame.origin.x
+                                                              startingY:startY]];
+        [vwBarBottom.layer setMask:[self getLayerForBottomBarWithCornerRadius:r]];
+        
         //initial popover frame
-        constraintTop.constant = startY + 2;
+        constraintPopover_Top.constant = startY + 2;
         [self.view layoutIfNeeded];
     }
     else {
@@ -81,29 +175,31 @@
         CGFloat startY = rect.origin.y;
 
         //draw popover
-        [vwBarTop.layer setMask:[self drawTopBarWithCornerRadius:r]];
-        [vwBarBottom.layer setMask:[self drawBottomBarWithCornerRadius:r
-                                                             startingX:(rect.origin.x + (rect.size.width/2))-vwPopOver.frame.origin.x
-                                                             startingY:startY]];
-
+        [vwBarTop.layer setMask:[self getLayerForTopBarWithCornerRadius:r]];
+        [vwBarBottom.layer setMask:[self getLayerForBottomBarWithCornerRadius:r
+                                                                    startingX:(rect.origin.x + (rect.size.width/2))-vwPopover.frame.origin.x
+                                                                    startingY:startY]];
+        
         //initial popover frame
-        constraintTop.constant = startY - k_POPOVER_HEIGHT_START - 2;
+        constraintPopover_Top.constant = startY - k_POPOVER_HEIGHT_START - 2;
         [self.view layoutIfNeeded];
-        constraintTop.constant = rect.origin.y - k_POPOVER_HEIGHT_FINAL - 2;
+        constraintPopover_Top.constant = rect.origin.y - k_POPOVER_HEIGHT_FINAL - 2;
     }
 
+    [self.view setAlpha:0.0f];
     //animate popover
-    constraintHeight.constant = k_POPOVER_HEIGHT_FINAL;
-    [UIView animateWithDuration:0.26
+    constraintPopover_Height.constant = k_POPOVER_HEIGHT_FINAL;
+    [UIView animateWithDuration:k_ANIMATION_DURATION
                           delay:0
                         options:UIViewAnimationOptionCurveEaseIn
                      animations:^{
+                         [self.view setAlpha:1.0f];
                          [self.view layoutIfNeeded];
                      }
                      completion:nil];
 }
 
--(CAShapeLayer *)drawTopBarWithCornerRadius:(CGFloat)r startingX:(NSInteger)startX startingY:(NSInteger)startY
+-(CAShapeLayer *)getLayerForTopBarWithCornerRadius:(CGFloat)r startingX:(NSInteger)startX startingY:(NSInteger)startY
 {
     CGRect      rect = vwBarTop.bounds;
 
@@ -113,7 +209,7 @@
     NSInteger   y = 0;
 
     CGPoint point_1_Start   = CGPointMake(x, y);
-    CGPoint point_2_Line    = CGPointMake(x - r, r);
+    CGPoint point_2_Line    = CGPointMake(x-r, r);
     CGPoint point_3_Line    = CGPointMake(r, r);
     CGPoint point_4_Arc     = CGPointMake(r, h);
     CGPoint point_5_Line    = CGPointMake(w, h);
@@ -137,17 +233,11 @@
                  clockwise:NO];
     [path addLineToPoint:point_7_Line];
     [path closePath];
-
-    CAShapeLayer *layer = [CAShapeLayer layer];
-    [layer setFrame:rect];
-    [layer setPath:path.CGPath];
-
-    [vwBarTop.layer setMasksToBounds:YES];
     
-    return layer;
+    return [self getLayerWithPath:path andRect:rect];
 }
 
--(CAShapeLayer *)drawBottomBarWithCornerRadius:(CGFloat)r startingX:(NSInteger)startX startingY:(NSInteger)startY
+-(CAShapeLayer *)getLayerForBottomBarWithCornerRadius:(CGFloat)r startingX:(NSInteger)startX startingY:(NSInteger)startY
 {
     CGRect      rect = vwBarBottom.bounds;
 
@@ -182,16 +272,10 @@
     [path addLineToPoint:point_7_Line];
     [path closePath];
 
-    CAShapeLayer *layer = [CAShapeLayer layer];
-    [layer setFrame:rect];
-    [layer setPath:path.CGPath];
-
-    [vwBarTop.layer setMasksToBounds:YES];
-    
-    return layer;
+    return [self getLayerWithPath:path andRect:rect];
 }
 
--(CAShapeLayer *)drawTopBarWithCornerRadius:(CGFloat)r
+-(CAShapeLayer *)getLayerForTopBarWithCornerRadius:(CGFloat)r
 {
     CGRect rect = vwBarTop.bounds;
 
@@ -216,16 +300,10 @@
                  clockwise:NO];
     [path closePath];
 
-    CAShapeLayer *layer = [CAShapeLayer layer];
-    [layer setFrame:rect];
-    [layer setPath:path.CGPath];
-
-    [vwBarTop.layer setMasksToBounds:YES];
-
-    return layer;
+    return [self getLayerWithPath:path andRect:rect];
 }
 
--(CAShapeLayer *)drawBottomBarWithCornerRadius:(CGFloat)r
+-(CAShapeLayer *)getLayerForBottomBarWithCornerRadius:(CGFloat)r
 {
     CGRect rect = vwBarBottom.bounds;
 
@@ -249,13 +327,15 @@
                  clockwise:NO];
     [path closePath];
 
+    return [self getLayerWithPath:path andRect:rect];
+}
+
+-(CAShapeLayer *)getLayerWithPath:(UIBezierPath *)path andRect:(CGRect)rect
+{
     CAShapeLayer *layer = [CAShapeLayer layer];
     [layer setFrame:rect];
     [layer setPath:path.CGPath];
 
-    [vwBarBottom.layer setMasksToBounds:YES];
-    
     return layer;
 }
-
 @end
