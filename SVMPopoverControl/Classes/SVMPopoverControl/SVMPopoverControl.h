@@ -19,7 +19,7 @@
 @property (nonatomic, weak) id <SVMPopoverDelegate> svmDelegate;
 @property (assign) NSInteger tag;
 
--(id)initWithDelegate:(id)delegate cancelButton:(NSString *)cancel andActionButton:(NSString *)action;
--(void)showPopoverFromRect:(CGRect)rect;
+-(id)initInView:(UIViewController *)mainView delegate:(id)delegate cancelButton:(NSString *)cancel otherButton:(NSString *)action;
+-(void)showPopoverFromView:(UIView *)view;
 -(void)hide;
 @end

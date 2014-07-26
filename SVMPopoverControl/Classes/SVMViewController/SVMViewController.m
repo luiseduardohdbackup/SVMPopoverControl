@@ -23,23 +23,18 @@
 
 -(IBAction)btnTestAct:(UIButton *)sender
 {
-    SVMPopoverControl *popOver = [[SVMPopoverControl alloc] initWithDelegate:self
-                                                                cancelButton:@"Cancel"
-                                                             andActionButton:@"Action"];
-    [popOver setTag:0];
-
-    [self addChildViewController:popOver];
-    [popOver didMoveToParentViewController:self];
-    [popOver.view setFrame:self.view.bounds];
-    [self.view addSubview:popOver.view];
-
-    [popOver showPopoverFromRect:sender.frame];
+    SVMPopoverControl *popOver = [[SVMPopoverControl alloc] initInView:self
+                                                              delegate:self
+                                                          cancelButton:@"Cancel"
+                                                           otherButton:@"Action"];
+    [popOver setTag:100];
+    [popOver showPopoverFromView:sender];
 }
 
 #pragma mark - SVMPopover Delegate
 -(void)svmPopover:(SVMPopoverControl *)svmPopover clickedButtonAtIndex:(NSInteger)buttonIndex
 {
-    if (svmPopover.tag == 0) {
+    if (svmPopover.tag == 100) {
         switch (buttonIndex) {
             case 0: {   //cancel
                 NSLog(@"Cancel");

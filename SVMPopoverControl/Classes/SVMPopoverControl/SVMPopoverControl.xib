@@ -14,6 +14,7 @@
                 <outlet property="constraintButtonContainer_Height" destination="A4V-ka-cZl" id="N6p-L9-fmt"/>
                 <outlet property="constraintPopover_Height" destination="j7g-xr-38p" id="BUN-95-ewE"/>
                 <outlet property="constraintPopover_Top" destination="4J6-Ne-tH4" id="LwG-Fo-T1Q"/>
+                <outlet property="popoverView" destination="5Dt-M7-I63" id="uFQ-af-ed9"/>
                 <outlet property="view" destination="i5M-Pr-FkT" id="sfx-zR-JGt"/>
                 <outlet property="vwBarBottom" destination="auY-hy-Pt4" id="aLF-ru-gAq"/>
                 <outlet property="vwBarTop" destination="Vdx-Iy-i3K" id="VXJ-Sa-XGi"/>

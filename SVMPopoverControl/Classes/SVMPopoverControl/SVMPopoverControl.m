@@ -16,6 +16,8 @@
     IBOutlet UIButton *btnDismiss;
 
     IBOutlet UIView *vwPopover;
+    IBOutlet UIView *popoverView;
+
     IBOutlet UIView *vwBarTop;
     IBOutlet UIView *vwBarBottom;
     IBOutlet UIView *vwButtonContainer;
@@ -47,10 +49,20 @@
     return self;
 }
 
-- (id)initWithDelegate:(id)delegate cancelButton:(NSString *)cancel andActionButton:(NSString *)action
+-(id)initInView:(UIViewController *)mainView delegate:(id)delegate cancelButton:(NSString *)cancel otherButton:(NSString *)action
 {
     self = [self initWithNibName:@"SVMPopoverControl" bundle:nil];
     if (self) {
+        if (mainView) {
+            [mainView addChildViewController:self];
+            [mainView.view addSubview:self.view];
+            [self didMoveToParentViewController:mainView];
+            [self.view setFrame:[UIScreen mainScreen].bounds];
+        }
+        else {
+            return nil;
+        }
+        
         if (delegate) {
             svmDelegate = delegate;
         }
@@ -82,8 +94,11 @@
 }
 
 #pragma mark - Popover methods
--(void)showPopoverFromRect:(CGRect)rect
+-(void)showPopoverFromView:(UIView *)view
 {
+    //get view's main screen relative rect
+    CGRect rect = [[[UIApplication sharedApplication] keyWindow] convertRect:view.bounds
+                                                                    fromView:view];
     [self drawPopoverFromRect:rect withCornerRadius:12.0f];
 }
 
@@ -113,8 +128,9 @@
     if ([svmDelegate respondsToSelector:@selector(svmPopover:clickedButtonAtIndex:)]) {
         NSLog(@"delegated %d",sender.tag);
         [svmDelegate svmPopover:self clickedButtonAtIndex:sender.tag];
+
+        [self btnDismissAct:btnDismiss];
     }
-    [self btnDismissAct:btnDismiss];
 }
 
 #pragma mark - Draw Methods
